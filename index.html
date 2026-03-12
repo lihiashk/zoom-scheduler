@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="למידה מרחוק">
+  <title>השיעורים שלי</title>
+  <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;700;900&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Rubik', sans-serif; direction: rtl; background: #0f172a; min-height: 100vh; }
+    input, select, button { font-family: 'Rubik', sans-serif; }
+    input:focus, select:focus { outline: none; border-color: #6366f1 !important; box-shadow: 0 0 0 3px rgba(99,102,241,0.25) !important; }
+    ::placeholder { color: rgba(255,255,255,0.2); }
+    option { background: #1e293b; }
+
+    .screen { display: none; min-height: 100vh; }
+    .screen.active { display: flex; }
+
+    /* ── Kid ── */
+    #kid-screen { background: linear-gradient(160deg,#1a1a2e,#16213e,#0f3460); flex-direction: column; align-items: center; justify-content: center; padding: 24px; position: relative; overflow: hidden; isolation: isolate; }
+    .star { position: fixed; border-radius: 50%; background: white; pointer-events: none; z-index: 0; }
+    @keyframes twinkle { from{opacity:0.1} to{opacity:1} }
+    @keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+    #kid-title { color: white; font-size: clamp(24px,6vw,38px); font-weight: 900; text-align: center; margin: 8px 0 4px; }
+    #kid-sub   { color: rgba(255,255,255,0.4); font-size: 14px; text-align: center; margin-bottom: 32px; }
+    .classes   { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 400px; }
+    .class-btn { border: none; border-radius: 22px; padding: 18px 20px; display: flex; align-items: center; gap: 14px; width: 100%; cursor: pointer; transition: transform 0.1s, box-shadow 0.1s; text-align: right; }
+    .class-btn:active { transform: translateY(6px) !important; }
+    .gear-btn  { position: fixed; bottom: 20px; left: 20px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; width: 42px; height: 42px; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; }
+
+    /* ── Overlay ── */
+    #overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 100; display: none; align-items: center; justify-content: center; padding: 24px; }
+    #overlay.open { display: flex; }
+    .ov-card { background: #1e293b; border-radius: 20px; padding: 28px 24px; width: 100%; max-width: 360px; border: 1px solid rgba(99,102,241,0.3); text-align: center; }
+    .ov-card h3 { color: white; font-size: 18px; font-weight: 900; margin: 10px 0 8px; }
+    .ov-card p  { color: rgba(255,255,255,0.5); font-size: 13px; margin-bottom: 20px; line-height: 1.6; }
+    .join-link  { display: block; background: linear-gradient(135deg,#22c55e,#16a34a); border-radius: 14px; padding: 16px; color: white; font-weight: 900; font-size: 18px; text-decoration: none; box-shadow: 0 6px 0 #15803d; }
+    .cancel-btn { margin-top: 12px; width: 100%; background: none; border: none; color: rgba(255,255,255,0.3); font-size: 14px; cursor: pointer; padding: 8px; }
+
+    /* ── Loading ── */
+    #loading-screen { flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
+    #loading-screen p { color: rgba(255,255,255,0.4); font-size: 15px; }
+    .spinner { width: 36px; height: 36px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #6366f1; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Admin ── */
+    #admin-screen { flex-direction: column; align-items: center; padding: 28px 20px 48px; }
+    .admin-inner  { width: 100%; max-width: 420px; }
+    .admin-hdr    { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .admin-hdr h2 { color: white; font-size: 21px; font-weight: 900; }
+    .back-btn     { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; color: rgba(255,255,255,0.6); padding: 8px 14px; cursor: pointer; font-size: 14px; }
+    .class-card   { background: rgba(255,255,255,0.04); border-radius: 16px; padding: 16px 18px; margin-bottom: 14px; border: 1px solid rgba(255,255,255,0.07); }
+    .card-hdr     { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; color: rgba(255,255,255,0.5); font-size: 13px; font-weight: 700; }
+    .two-col      { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .field        { margin-bottom: 10px; }
+    .field label  { color: rgba(255,255,255,0.4); font-size: 10px; font-weight: 700; letter-spacing: 0.6px; display: block; margin-bottom: 5px; text-transform: uppercase; }
+    .field input, .field select { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18); border-radius: 10px; color: white; padding: 10px 12px; font-size: 14px; width: 100%; }
+    .field select { cursor: pointer; }
+    .save-btn     { background: linear-gradient(135deg,#6366f1,#8b5cf6); border: none; border-radius: 14px; color: white; padding: 16px; width: 100%; font-size: 17px; font-weight: 700; cursor: pointer; box-shadow: 0 7px 0 #4338ca; margin-top: 4px; }
+    .save-btn:disabled { opacity: 0.5; cursor: default; }
+
+    /* ── Toast ── */
+    #toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #1e293b; border: 1px solid rgba(99,102,241,0.4); color: white; padding: 12px 22px; border-radius: 12px; font-weight: 700; z-index: 9999; box-shadow: 0 8px 30px rgba(0,0,0,0.4); font-size: 15px; white-space: nowrap; display: none; }
+  </style>
+  <link rel="manifest" href="data:application/json,{&quot;name&quot;:&quot;למידה מרחוק&quot;,&quot;short_name&quot;:&quot;למידה מרחוק&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;#1a1a2e&quot;,&quot;theme_color&quot;:&quot;#1a1a2e&quot;}">
+  <script>
+    // Emoji favicon
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    // Background
+    ctx.fillStyle = '#1a1a2e';
+    ctx.roundRect(0, 0, 512, 512, 80);
+    ctx.fill();
+    // Emoji
+    ctx.font = '360px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🎒', 256, 280);
+    const dataUrl = canvas.toDataURL('image/png');
+    const link = document.createElement('link');
+    link.rel = 'icon'; link.href = dataUrl;
+    document.head.appendChild(link);
+    const link2 = document.createElement('link');
+    link2.rel = 'apple-touch-icon'; link2.href = dataUrl;
+    document.head.appendChild(link2);
+  </script>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<!-- Overlay -->
+<div id="overlay">
+  <div class="ov-card">
+    <div style="font-size:32px">🎥</div>
+    <h3>הצטרפות לזום</h3>
+    <p>לחצו על הכפתור הירוק<br>כדי להיכנס לשיעור</p>
+    <a id="ov-link" href="#" target="_blank" class="join-link" onclick="closeOverlay()">כנסו לזום 🎥</a>
+    <button class="cancel-btn" onclick="closeOverlay()">ביטול</button>
+  </div>
+</div>
+
+<!-- Loading -->
+<div id="loading-screen" class="screen active">
+  <div class="spinner"></div>
+  <p>טוען שיעורים...</p>
+</div>
+
+<!-- Kid -->
+<div id="kid-screen" class="screen">
+  <div style="font-size:50px;animation:bob 3s infinite;text-align:center">🎒</div>
+  <h1 id="kid-title">השיעורים שלי</h1>
+  <p id="kid-date" style="color:rgba(255,255,255,0.7);font-size:15px;font-weight:700;text-align:center;margin:2px 0 0;display:none"></p>
+  <p id="kid-sub">לחץ על השיעור כדי להיכנס</p>
+  <div class="classes" id="classes-list" style="position:relative;z-index:1"></div>
+  <button class="gear-btn" id="gear-btn" onclick="showAdmin()" style="display:none">⚙️</button>
+</div>
+
+
+<!-- Admin -->
+<div id="admin-screen" class="screen">
+  <div class="admin-inner">
+    <div class="admin-hdr">
+      <h2>⚙️ הגדרות</h2>
+      <button class="back-btn" onclick="showKid()">← חזרה</button>
+    </div>
+
+    <!-- Personalization -->
+    <div class="class-card">
+      <div class="card-hdr"><span style="font-size:22px">🏫</span> כיתה ותאריך</div>
+      <div class="two-col">
+        <div class="field"><label>שם הכיתה</label><input id="child-name-input" placeholder="למשל: א׳1"></div>
+        <div class="field"><label>יום ותאריך</label><input id="schedule-date-input" placeholder="יום ב׳ 12.3"></div>
+      </div>
+    </div>
+
+    <div id="admin-cards"></div>
+
+    <button class="save-btn" id="save-btn" onclick="saveClasses()">✅ שמור</button>
+  </div>
+</div>
+
+<script>
+const DB_URL = "https://zoom-scheduler-1099c-default-rtdb.firebaseio.com/schedule.json";
+
+const DEFAULT_CLASSES = [
+  {id:1,label:"שיעור ראשון", subject:"",teacher:"",emoji:"📖",color:"#FF6B6B",shadow:"#c0392b",time:"09:30",type:"zoom",link:"",task:""},
+  {id:2,label:"שיעור שני",   subject:"",teacher:"",emoji:"✏️", color:"#FFD93D",shadow:"#e0a800",time:"10:30",type:"zoom",link:"",task:""},
+  {id:3,label:"שיעור שלישי",subject:"",teacher:"",emoji:"📐",color:"#6BCB77",shadow:"#27ae60",time:"11:30",type:"zoom",link:"",task:""},
+  {id:4,label:"שיעור רביעי",subject:"",teacher:"",emoji:"📝",color:"#C4B5FD",shadow:"#6d28d9",time:"12:30",type:"zoom",link:"",task:""},
+];
+
+
+// ── Subject → Emoji map ───────────────────────────────────────────────────────
+const SUBJECT_EMOJI = {
+  'מתמטיקה': '🔢', 'מת': '🔢', 'חשבון': '🔢',
+  'עברית': '📝', 'עב': '📝',
+  'אנגלית': '🔤', 'אנג': '🔤', 'english': '🔤',
+  'מדעים': '🔬', 'מדע': '🔬', 'ביולוגיה': '🔬',
+  'היסטוריה': '🏛️', 'היסט': '🏛️',
+  'גיאוגרפיה': '🌍', 'גיאו': '🌍',
+  'אמנות': '🎨', 'ציור': '🎨',
+  'מוזיקה': '🎵', 'מוז': '🎵',
+  'ספורט': '⚽', 'תנ"ך': '📖', 'תנך': '📖', 'תורה': '📖',
+  'חינוך': '🌱', 'כיתה': '🏫',
+  'מחשבים': '💻', 'טכנולוגיה': '💻',
+  'פיזיקה': '⚡', 'כימיה': '⚗️',
+};
+
+function emojiForSubject(subject) {
+  if (!subject) return null;
+  const s = subject.trim().toLowerCase();
+  for (const [key, emoji] of Object.entries(SUBJECT_EMOJI)) {
+    if (s.includes(key.toLowerCase())) return emoji;
+  }
+  return null;
+}
+
+let state = { classes: JSON.parse(JSON.stringify(DEFAULT_CLASSES)), childName: "", scheduleDate: "" };
+let adminOpen = false;
+
+// ── Fetch from Firebase REST ─────────────────────────────────────────────────
+async function loadFromFirebase() {
+  try {
+    const res = await fetch(DB_URL);
+    const d = await res.json();
+    if (d) {
+      if (d.classes)                 state.classes   = d.classes;
+      if (d.childName !== undefined) state.childName = d.childName;
+    if (d.scheduleDate !== undefined) state.scheduleDate = d.scheduleDate;
+    }
+  } catch(e) { console.warn('fetch error', e); }
+}
+
+// Boot
+(async () => {
+  await loadFromFirebase();
+  show('kid-screen');
+  renderKid();
+  // Poll every 30s for updates
+  setInterval(async () => {
+    if (!adminOpen) {
+      await loadFromFirebase();
+      renderKid();
+    }
+  }, 30000);
+})();
+
+// ── Save to Firebase REST ────────────────────────────────────────────────────
+async function saveToFirebase() {
+  const res = await fetch(DB_URL, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ classes: state.classes, childName: state.childName, scheduleDate: state.scheduleDate }),
+  });
+  if (!res.ok) throw new Error('save failed');
+}
+
+// ── Screens ───────────────────────────────────────────────────────────────────
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+window.showAdmin = function() {
+  adminOpen = true;
+  renderAdmin();
+  show('admin-screen');
+};
+
+window.showKid = function() {
+  adminOpen = false;
+  renderKid();
+  show('kid-screen');
+};
+
+// ── Kid Render ────────────────────────────────────────────────────────────────
+function renderKid() {
+  const gearBtn = document.getElementById('gear-btn');
+  if (gearBtn) gearBtn.style.display = new URLSearchParams(window.location.search).has('admin') ? 'flex' : 'none';
+  const name = state.childName || "";
+  document.getElementById('kid-title').textContent = name ? `שיעורי ${name}` : "השיעורים שלי";
+  document.getElementById('kid-sub').textContent   = "לחצו על שיעור כדי להיכנס לזום";
+  const dateEl = document.getElementById('kid-date');
+  if (state.scheduleDate) { dateEl.textContent = state.scheduleDate; dateEl.style.display = ''; }
+  else { dateEl.style.display = 'none'; }
+
+  const list = document.getElementById('classes-list');
+  list.innerHTML = "";
+  state.classes.forEach(cls => {
+    const isAsync = cls.type === "async";
+    if (isAsync) cls.emoji = "📋";
+
+    // Determine the URL to open (must start with http to be valid)
+    let urlToOpen = null;
+    if (isAsync) {
+      const lnk = (cls.link || '').trim();
+      if (lnk.startsWith('http')) urlToOpen = lnk;
+    } else {
+      const lnk = (cls.link || '').trim().replace(/zoom\.us\/j\//, "zoom.us/wc/join/");
+      if (lnk.startsWith('http')) urlToOpen = lnk;
+    }
+
+    // A class is "active" (colored) if it has any content
+    const hasContent = isAsync ? (!!(cls.task||'').trim() || !!urlToOpen) : !!urlToOpen;
+
+    const tc = hasContent ? "#1a1a2e" : "rgba(255,255,255,0.4)";
+    const sc = hasContent ? "rgba(26,26,46,0.6)" : "rgba(255,255,255,0.25)";
+    const dc = hasContent ? "rgba(26,26,46,0.5)" : "rgba(255,255,255,0.25)";
+
+    const inner = `
+      <span style="font-size:34px;line-height:1;flex-shrink:0">${cls.emoji}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:900;font-size:18px;color:${tc};line-height:1.1">${cls.subject||cls.label}</div>
+        ${cls.teacher ? `<div style="font-size:13px;color:${sc};margin-top:2px">${cls.teacher}</div>` : ""}
+        ${isAsync&&(cls.task||'').trim() ? `<div style="font-size:12px;color:rgba(26,26,46,0.65);margin-top:3px;font-style:italic">${cls.task}</div>` : ""}
+        <div style="font-size:16px;font-weight:900;color:${dc};margin-top:4px;letter-spacing:0.5px">${cls.time} ⏰</div>
+      </div>
+      <div style="flex-shrink:0">
+        ${hasContent
+          ? `<div style="background:rgba(255,255,255,0.32);border-radius:10px;padding:7px 13px;font-size:13px;font-weight:700;color:#1a1a2e;white-space:nowrap">${isAsync?"📋 משימה":"כנסו ←"}</div>`
+          : `<div style="font-size:12px;color:rgba(255,255,255,0.25)">ממתינים...</div>`}
+      </div>`;
+
+    if (urlToOpen) {
+      // Clickable: use <a> tag — most reliable on all mobile browsers
+      const el = document.createElement('a');
+      el.className = 'class-btn';
+      el.href = urlToOpen;
+      el.target = '_blank';
+      el.rel = 'noreferrer noopener';
+      el.style.cssText = `background:${cls.color};box-shadow:0 7px 0 ${cls.shadow},0 10px 28px rgba(0,0,0,0.3);text-decoration:none;`;
+      el.innerHTML = inner;
+      list.appendChild(el);
+    } else {
+      // Not clickable: plain div, no href, no onclick
+      const el = document.createElement('div');
+      el.className = 'class-btn';
+      el.style.cssText = hasContent
+        ? `background:${cls.color};box-shadow:0 7px 0 ${cls.shadow},0 10px 28px rgba(0,0,0,0.3);cursor:default;`
+        : `background:rgba(255,255,255,0.07);box-shadow:0 3px 0 rgba(0,0,0,0.15);opacity:0.35;cursor:default;`;
+      el.innerHTML = inner;
+      list.appendChild(el);
+    }
+  });
+
+  addStars();
+}
+
+window.closeOverlay = function() { document.getElementById('overlay').classList.remove('open'); };
+document.getElementById('overlay').addEventListener('click', e => { if(e.target===e.currentTarget) window.closeOverlay(); });
+
+// ── Admin Render ──────────────────────────────────────────────────────────────
+function renderAdmin() {
+  document.getElementById('child-name-input').value = state.childName || "";
+  document.getElementById('schedule-date-input').value = state.scheduleDate || "";
+
+  const cards = document.getElementById('admin-cards');
+  cards.innerHTML = "";
+  state.classes.forEach(cls => {
+    const isAsync = cls.type === "async";
+    if (isAsync) cls.emoji = "📋";
+    const d = document.createElement('div');
+    d.className = 'class-card';
+    d.innerHTML = `
+      <div class="card-hdr"><span style="font-size:22px">${cls.emoji}</span>${cls.label}</div>
+      <div class="two-col">
+        <div class="field"><label>מקצוע</label><input data-id="${cls.id}" data-f="subject" value="${cls.subject||""}" placeholder="מתמטיקה..."></div>
+        <div class="field"><label>מורה</label><input data-id="${cls.id}" data-f="teacher" value="${cls.teacher||""}" placeholder="שם המורה"></div>
+      </div>
+      <div class="field"><label>אמוג׳י</label>
+        <input data-id="${cls.id}" data-f="emoji" value="${cls.emoji||""}" placeholder="📖" style="width:80px;font-size:20px;text-align:center" maxlength="4">
+      </div>
+      <div class="field"><label>שעה</label><input type="time" data-id="${cls.id}" data-f="time" value="${cls.time}" style="width:140px;color-scheme:dark"></div>
+      <div class="field"><label>סוג שיעור</label>
+        <select data-id="${cls.id}" data-f="type">
+          <option value="zoom"  ${cls.type==="zoom" ?"selected":""}>🎥 זום</option>
+          <option value="async" ${cls.type==="async"?"selected":""}>📋 משימה אסינכרונית</option>
+        </select>
+      </div>
+      ${isAsync ? `
+      <div class="field">
+        <label>תיאור המשימה</label>
+        <input data-id="${cls.id}" data-f="task" value="${cls.task||""}" placeholder="לקרוא עמ׳ 12...">
+      </div>
+      <div class="field">
+        <label>קישור (אופציונלי)</label>
+        <input type="url" data-id="${cls.id}" data-f="link" value="${cls.link||""}" placeholder="https://..." style="direction:ltr;text-align:left">
+      </div>` : `
+      <div class="field" id="lf-${cls.id}">
+        <label>לינק זום</label>
+        <input type="url" data-id="${cls.id}" data-f="link" value="${cls.link||""}" placeholder="https://zoom.us/j/..." style="direction:ltr;text-align:left">
+      </div>`}`;
+    cards.appendChild(d);
+  });
+
+  // Clean paste for URL fields
+  cards.querySelectorAll('input[type="url"], input[data-f="link"], input[data-f="task"]').forEach(el => {
+    el.addEventListener('paste', e => {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData('text/plain').trim();
+      el.value = text;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  });
+
+  cards.querySelectorAll('input,select').forEach(el => {
+    el.addEventListener('input', e => {
+      const id  = +e.target.dataset.id;
+      const f   = e.target.dataset.f;
+      const val = e.target.value;
+      const cls = state.classes.find(c => c.id === id);
+      if (!cls) return;
+      cls[f] = val;
+      // Auto-update emoji when subject changes (zoom only)
+      if (f === "subject" && cls.type !== "async") {
+        const auto = emojiForSubject(val);
+        if (auto) {
+          cls.emoji = auto;
+          const hdr = d.querySelector('.card-hdr span');
+          if (hdr) hdr.textContent = auto;
+        }
+      }
+      if (f === "type") {
+        const lf  = document.getElementById(`lf-${id}`);
+        const inp = lf.querySelector('input');
+        const iA  = val === "async";
+        lf.querySelector('label').textContent = iA ? "תיאור המשימה" : "לינק זום";
+        inp.dataset.f   = iA ? "task" : "link";
+        inp.value       = iA ? (cls.task||"") : (cls.link||"");
+        inp.placeholder = iA ? "לקרוא עמ׳ 12..." : "https://zoom.us/j/...";
+        if (iA) {
+          inp.removeAttribute('type'); inp.style.direction=""; inp.style.textAlign="";
+          cls.emoji = "📋";
+          cls.time = "11:30";
+          const hdr = d.querySelector('.card-hdr span');
+          if (hdr) hdr.textContent = "📋";
+          const timeInput = d.querySelector('input[type="time"]');
+          if (timeInput) timeInput.value = "11:30";
+        } else {
+          inp.type="url"; inp.style.direction="ltr"; inp.style.textAlign="left";
+        }
+      }
+    });
+  });
+
+  // Wire child name input
+  const nameInput = document.getElementById('child-name-input');
+  if (nameInput) {
+    nameInput.addEventListener('input', e => { state.childName = e.target.value; });
+  const dateInput = document.getElementById('schedule-date-input');
+  if (dateInput) dateInput.addEventListener('input', e => { state.scheduleDate = e.target.value; });
+  }
+}
+
+window.saveClasses = async function() {
+  const btn = document.getElementById('save-btn');
+  btn.textContent = "⏳ שומר..."; btn.disabled = true;
+  try {
+    await saveToFirebase();
+    toast("✅ נשמר! כל המכשירים מתעדכנים");
+    setTimeout(() => window.showKid(), 700);
+  } catch {
+    toast("⚠️ שגיאה — בדוק חיבור");
+  }
+  btn.textContent = "✅ שמור"; btn.disabled = false;
+};
+
+
+
+// ── Stars ─────────────────────────────────────────────────────────────────────
+let starsAdded = false;
+function addStars() {
+  if (starsAdded) return;
+  starsAdded = true;
+  const s = document.getElementById('kid-screen');
+  for (let i=0;i<20;i++) {
+    const el = document.createElement('div');
+    el.className = 'star';
+    const sz = Math.random()*3+2;
+    el.style.cssText = `width:${sz}px;height:${sz}px;opacity:${Math.random()*0.6+0.2};top:${Math.random()*100}%;left:${Math.random()*100}%;animation:twinkle ${Math.random()*3+2}s infinite alternate`;
+    s.appendChild(el);
+  }
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.display = "block";
+  setTimeout(()=>t.style.display="none", 2500);
+}
+</script>
+</body>
+</html>

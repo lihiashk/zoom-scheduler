@@ -268,14 +268,14 @@ function renderKid() {
     const hasContent = isAsync ? (!!(cls.task||'').trim() || !!urlToOpen) : !!urlToOpen;
 
     const tc = hasContent ? "#1a1a2e" : "rgba(255,255,255,0.4)";
-    const sc = hasContent ? "rgba(26,26,46,0.55)" : "rgba(255,255,255,0.25)";
-    const dc = hasContent ? "rgba(26,26,46,0.7)" : "rgba(255,255,255,0.25)";
+    const sc = hasContent ? "rgba(26,26,46,1)" : "rgba(255,255,255,0.25)";
+    const dc = hasContent ? "rgba(26,26,46,1)" : "rgba(255,255,255,0.25)";
 
     const subLine = isAsync && (cls.task||'').trim()
-      ? `<span style="font-size:16px;font-weight:900;color:${dc}">${cls.time}</span><span style="font-size:12px;color:${sc};font-style:italic"> • ${cls.task}</span>`
+      ? `<span style="font-size:16px;font-weight:400;color:${dc}">${cls.time}</span><span style="font-size:12px;color:${sc};font-style:italic"> • ${cls.task}</span>`
       : cls.teacher
-        ? `<span style="font-size:16px;font-weight:900;color:${dc}">${cls.time}</span><span style="font-size:12px;color:${sc}"> • ${cls.teacher}</span>`
-        : `<span style="font-size:16px;font-weight:900;color:${dc}">${cls.time}</span>`;
+        ? `<span style="font-size:16px;font-weight:400;color:${dc}">${cls.time}</span><span style="font-size:12px;color:${sc}"> • ${cls.teacher}</span>`
+        : `<span style="font-size:16px;font-weight:400;color:${dc}">${cls.time}</span>`;
 
     const inner = `
       <span style="font-size:36px;line-height:1;flex-shrink:0">${cls.emoji}</span>

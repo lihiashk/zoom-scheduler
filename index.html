@@ -189,7 +189,7 @@ function emojiForSubject(subject) {
   return null;
 }
 
-let state = { classes: JSON.parse(JSON.stringify(DEFAULT_CLASSES)), childName: "", scheduleDate: "" };
+let state = { classes: JSON.parse(JSON.stringify(DEFAULT_CLASSES)), childName: "", scheduleDate: "", scheduleDateRaw: "" };
 let adminOpen = false;
 
 // ── Fetch from Firebase REST ─────────────────────────────────────────────────
@@ -201,6 +201,7 @@ async function loadFromFirebase() {
       if (d.classes)                 state.classes   = d.classes;
       if (d.childName !== undefined) state.childName = d.childName;
     if (d.scheduleDate !== undefined) state.scheduleDate = d.scheduleDate;
+    if (d.scheduleDateRaw !== undefined) state.scheduleDateRaw = d.scheduleDateRaw;
     }
   } catch(e) { console.warn('fetch error', e); }
 }
@@ -224,7 +225,7 @@ async function saveToFirebase() {
   const res = await fetch(DB_URL, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ classes: state.classes, childName: state.childName, scheduleDate: state.scheduleDate }),
+    body: JSON.stringify({ classes: state.classes, childName: state.childName, scheduleDate: state.scheduleDate, scheduleDateRaw: state.scheduleDateRaw }),
   });
   if (!res.ok) throw new Error('save failed');
 }
@@ -330,14 +331,14 @@ document.getElementById('overlay').addEventListener('click', e => { if(e.target=
 // ── Admin Render ──────────────────────────────────────────────────────────────
 function renderAdmin() {
   document.getElementById('child-name-input').value = state.childName || "";
-  document.getElementById('schedule-date-input').value = state.scheduleDate || "";
-  updateDatePreview(state.scheduleDate || "");
+  document.getElementById('schedule-date-input').value = state.scheduleDateRaw || "";
+  updateDatePreview(state.scheduleDateRaw || "");
 
   const cards = document.getElementById('admin-cards');
   cards.innerHTML = "";
   state.classes.forEach(cls => {
     const isAsync = cls.type === "async";
-    if (isAsync) cls.emoji = "📋";
+    if (isAsync && !cls.emoji) cls.emoji = "📋";
     const d = document.createElement('div');
     d.className = 'class-card';
     d.innerHTML = `
@@ -418,24 +419,11 @@ function renderAdmin() {
         }
       }
       if (f === "type") {
-        const lf  = document.getElementById(`lf-${id}`);
-        const inp = lf.querySelector('input');
-        const iA  = val === "async";
-        lf.querySelector('label').textContent = iA ? "תיאור המשימה" : "לינק זום";
-        inp.dataset.f   = iA ? "task" : "link";
-        inp.value       = iA ? (cls.task||"") : (cls.link||"");
-        inp.placeholder = iA ? "לקרוא עמ׳ 12..." : "https://zoom.us/j/...";
-        if (iA) {
-          inp.removeAttribute('type'); inp.style.direction=""; inp.style.textAlign="";
-          cls.emoji = "📋";
-          cls.time = "11:30";
-          const hdr = d.querySelector('.card-hdr span');
-          if (hdr) hdr.textContent = "📋";
-          const timeInput = d.querySelector('input[type="time"]');
-          if (timeInput) timeInput.value = "11:30";
-        } else {
-          inp.type="url"; inp.style.direction="ltr"; inp.style.textAlign="left";
-        }
+        const iA = val === "async";
+        if (iA) { cls.emoji = "📋"; cls.time = "11:30"; }
+        // Re-render the whole admin to avoid lf- reference issues
+        renderAdmin();
+        return;
       }
     });
   });
@@ -446,7 +434,6 @@ function renderAdmin() {
     nameInput.addEventListener('input', e => { state.childName = e.target.value; });
   const dateInput = document.getElementById('schedule-date-input');
   if (dateInput) dateInput.addEventListener('input', e => {
-    state.scheduleDate = e.target.value;
     updateDatePreview(e.target.value);
   });
   }
@@ -464,12 +451,15 @@ function updateDatePreview(val) {
   const day = DAYS_HE[d.getDay()];
   const dd = String(d.getDate()).padStart(2,'0');
   const mm = String(d.getMonth()+1).padStart(2,'0');
-  el.textContent = `יום ${day}, ${dd}.${mm}`;
-  state.scheduleDate = `יום ${day} ${dd}.${mm}`;
+  const formatted = `יום ${day} ${dd}.${mm}`;
+  el.textContent = formatted;
+  state.scheduleDate = formatted;
+  state.scheduleDateRaw = val;
 }
 
 window.clearDate = function() {
   state.scheduleDate = '';
+  state.scheduleDateRaw = '';
   const inp = document.getElementById('schedule-date-input');
   if (inp) inp.value = '';
   const prev = document.getElementById('date-preview');

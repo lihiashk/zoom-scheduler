@@ -125,7 +125,10 @@
   <div class="admin-inner">
     <div class="admin-hdr">
       <h2>⚙️ הגדרות</h2>
-      <button class="back-btn" onclick="showKid()">← חזרה</button>
+      <div style="display:flex;gap:8px">
+        <button type="button" onclick="clearAllLinks()" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);border-radius:10px;color:#f87171;font-size:13px;font-weight:700;cursor:pointer;padding:8px 12px;white-space:nowrap">🗑️ נקה לינקים</button>
+        <button class="back-btn" onclick="showKid()">← חזרה</button>
+      </div>
     </div>
 
     <!-- Personalization -->
@@ -133,7 +136,14 @@
       <div class="card-hdr"><span style="font-size:22px">🏫</span> כיתה ותאריך</div>
       <div class="two-col">
         <div class="field"><label>שם הכיתה</label><input id="child-name-input" placeholder="למשל: א׳1"></div>
-        <div class="field"><label>יום ותאריך</label><input id="schedule-date-input" placeholder="יום ב׳ 12.3"></div>
+        <div class="field" style="grid-column:1/-1">
+          <label>תאריך</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="date" id="schedule-date-input" style="flex:1;color-scheme:dark">
+            <button type="button" onclick="clearDate()" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);border-radius:8px;color:rgba(255,255,255,0.5);padding:9px 12px;cursor:pointer;font-size:13px;white-space:nowrap">✕ נקה</button>
+          </div>
+          <div id="date-preview" style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:5px"></div>
+        </div>
       </div>
     </div>
 
@@ -321,6 +331,7 @@ document.getElementById('overlay').addEventListener('click', e => { if(e.target=
 function renderAdmin() {
   document.getElementById('child-name-input').value = state.childName || "";
   document.getElementById('schedule-date-input').value = state.scheduleDate || "";
+  updateDatePreview(state.scheduleDate || "");
 
   const cards = document.getElementById('admin-cards');
   cards.innerHTML = "";
@@ -352,16 +363,34 @@ function renderAdmin() {
       </div>
       <div class="field">
         <label>קישור (אופציונלי)</label>
-        <input type="url" data-id="${cls.id}" data-f="link" value="${cls.link||""}" placeholder="https://..." style="direction:ltr;text-align:left">
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="url" data-id="${cls.id}" data-f="link" value="${cls.link||""}" placeholder="https://..." style="direction:ltr;text-align:left;flex:1">
+          <button type="button" data-clear="${cls.id}" data-clear-f="link" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);border-radius:8px;color:rgba(255,255,255,0.5);padding:9px 12px;cursor:pointer;font-size:13px;flex-shrink:0;white-space:nowrap">✕ נקה</button>
+        </div>
       </div>` : `
       <div class="field" id="lf-${cls.id}">
         <label>לינק זום</label>
-        <input type="url" data-id="${cls.id}" data-f="link" value="${cls.link||""}" placeholder="https://zoom.us/j/..." style="direction:ltr;text-align:left">
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="url" data-id="${cls.id}" data-f="link" value="${cls.link||""}" placeholder="https://zoom.us/j/..." style="direction:ltr;text-align:left;flex:1">
+          <button type="button" data-clear="${cls.id}" data-clear-f="link" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);border-radius:8px;color:rgba(255,255,255,0.5);padding:9px 12px;cursor:pointer;font-size:13px;flex-shrink:0;white-space:nowrap">✕ נקה</button>
+        </div>
       </div>`}`;
     cards.appendChild(d);
   });
 
   // Clean paste for URL fields
+  cards.querySelectorAll('button[data-clear]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = +btn.dataset.clear;
+      const f  = btn.dataset.clearF;
+      const cls = state.classes.find(c => c.id === id);
+      if (!cls) return;
+      cls[f] = '';
+      const inp = btn.parentElement.querySelector('input');
+      if (inp) inp.value = '';
+    });
+  });
+
   cards.querySelectorAll('input[type="url"], input[data-f="link"], input[data-f="task"]').forEach(el => {
     el.addEventListener('paste', e => {
       e.preventDefault();
@@ -416,9 +445,43 @@ function renderAdmin() {
   if (nameInput) {
     nameInput.addEventListener('input', e => { state.childName = e.target.value; });
   const dateInput = document.getElementById('schedule-date-input');
-  if (dateInput) dateInput.addEventListener('input', e => { state.scheduleDate = e.target.value; });
+  if (dateInput) dateInput.addEventListener('input', e => {
+    state.scheduleDate = e.target.value;
+    updateDatePreview(e.target.value);
+  });
   }
 }
+
+
+// ── Date helpers ──────────────────────────────────────────────────────────────
+const DAYS_HE = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+
+function updateDatePreview(val) {
+  const el = document.getElementById('date-preview');
+  if (!el) return;
+  if (!val) { el.textContent = ''; return; }
+  const d = new Date(val + 'T12:00:00');
+  const day = DAYS_HE[d.getDay()];
+  const dd = String(d.getDate()).padStart(2,'0');
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  el.textContent = `יום ${day}, ${dd}.${mm}`;
+  state.scheduleDate = `יום ${day} ${dd}.${mm}`;
+}
+
+window.clearDate = function() {
+  state.scheduleDate = '';
+  const inp = document.getElementById('schedule-date-input');
+  if (inp) inp.value = '';
+  const prev = document.getElementById('date-preview');
+  if (prev) prev.textContent = '';
+};
+
+window.clearAllLinks = function() {
+  if (!confirm('למחוק את כל הלינקים?')) return;
+  state.classes.forEach(cls => { cls.link = ''; cls.task = ''; });
+  renderAdmin();
+  toast('🗑️ כל הלינקים נוקו');
+};
 
 window.saveClasses = async function() {
   const btn = document.getElementById('save-btn');
